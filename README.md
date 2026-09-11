@@ -11,7 +11,7 @@ It provides:
   configuration-defined API keys;
 - request-scoped credential filtering while preserving CPA priority,
   round-robin, fill-first, weighted selection, and session affinity;
-- group-scoped model discovery and quota-health APIs for NewAPI;
+- group-scoped model discovery, quota-health, and official Codex quota APIs for NewAPI;
 - a management page registered as `分组管理` in the CPA navigation.
 
 ## Architecture
@@ -24,10 +24,11 @@ The customization is split into three independently upgradeable layers:
 3. NewAPI calls the plugin management APIs instead of depending on private CPA
    endpoints or the global `/v1/models` response.
 
-The plugin refuses to load unless the host reports both required features:
+The plugin refuses to load unless the host reports all required features:
 
 - `scheduler.eligible-auth-filter.v1`
 - `auth.runtime-inspection.v1`
+- `auth.http-request.v1`
 
 This fail-closed handshake prevents an older CPA host from silently ignoring a
 group filter and routing a request to the wrong credential.
@@ -112,6 +113,7 @@ All endpoints require normal CPA management authentication.
 | `POST` | `/v0/management/plugins/lzz-groups/refresh` | Force a credential metadata refresh |
 | `POST` | `/v0/management/plugins/lzz-groups/models` | Models visible to one downstream API key |
 | `POST` | `/v0/management/plugins/lzz-groups/quota-health` | Group-scoped quota availability |
+| `POST` | `/v0/management/plugins/lzz-groups/usage` | Official Codex 5h/7d quota windows |
 | `GET` | `/v0/resource/plugins/lzz-groups/ui` | Management page resource |
 
 Model request example:
@@ -126,12 +128,23 @@ Quota-health request example:
 {"api_key":"<DOWNSTREAM_API_KEY>","models":["gpt-5.6-sol"]}
 ```
 
+Quota usage request example:
+
+```json
+{"api_key":"<DOWNSTREAM_API_KEY>","group":"lzz_plus","refresh":true}
+```
+
+Official quota responses are cached per credential for 60 seconds. A failed refresh may return
+the last cached snapshot with `stale=true` and a non-empty `refresh_error`; stale data is never
+presented as a successful fresh refresh.
+
 The raw CPA `/v1/models` endpoint remains CPA's global model catalog. NewAPI
 must use the plugin `/models` endpoint as the policy-scoped source of truth.
 
 ## Security properties
 
 - full upstream API keys are never returned by the runtime inspection API;
+- OAuth tokens used by quota requests are substituted inside the CPA host and are never returned to the plugin or NewAPI;
 - account API keys are exposed only as masked previews;
 - physical credential JSON is read only for file-backed migration data;
 - downstream API keys are returned only by the authenticated generic plugin
