@@ -9,6 +9,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/router-for-me/CLIProxyAPI/v7/sdk/pluginapi"
 )
 
 const (
@@ -75,12 +77,6 @@ type hostHTTPRequest struct {
 	Method  string      `json:"method"`
 	URL     string      `json:"url"`
 	Headers http.Header `json:"headers"`
-}
-
-type hostHTTPResponse struct {
-	StatusCode int         `json:"status_code"`
-	Headers    http.Header `json:"headers"`
-	Body       []byte      `json:"body"`
 }
 
 type quotaCacheEntry struct {
@@ -269,7 +265,7 @@ func fetchOfficialQuota(auth cachedAuth, ordinal int) (usageAccount, error) {
 	if accountID := strings.TrimSpace(auth.ChatGPTAccount); accountID != "" {
 		headers.Set("Chatgpt-Account-Id", accountID)
 	}
-	var response hostHTTPResponse
+	var response pluginapi.HTTPResponse
 	if errCall := callHost(hostAuthHTTPMethod, hostAuthHTTPRequest{
 		AuthIndex: auth.Entry.AuthIndex,
 		Request: hostHTTPRequest{
