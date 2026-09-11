@@ -42,6 +42,7 @@ const hostFeaturesMethod = "host.features"
 var requiredHostFeatures = []string{
 	"scheduler.eligible-auth-filter.v1",
 	"auth.runtime-inspection.v1",
+	"auth.http-request.v1",
 }
 
 type hostFeaturesResponse struct {
@@ -134,16 +135,22 @@ func refreshAuthCache(force bool) error {
 			}
 		}
 
+		var physicalJSON json.RawMessage
+		if entry.AuthIndex != "" && strings.EqualFold(entry.Source, "file") {
+			var physical pluginapi.HostAuthGetResponse
+			if errGet := callHost(pluginabi.MethodHostAuthGet, pluginapi.HostAuthGetRequest{AuthIndex: entry.AuthIndex}, &physical); errGet == nil {
+				physicalJSON = physical.JSON
+				cached.PlanType, cached.ChatGPTAccount = codexUsageMetadataFromAuthJSON(physical.JSON)
+			}
+		}
+
 		if groups, configured := configuredCredentialGroups(entry.ID, entry.AuthIndex); configured {
 			cached.Groups = groups
 			cached.GroupSource = "plugin-config"
-		} else if entry.AuthIndex != "" && strings.EqualFold(entry.Source, "file") {
-			var physical pluginapi.HostAuthGetResponse
-			if errGet := callHost(pluginabi.MethodHostAuthGet, pluginapi.HostAuthGetRequest{AuthIndex: entry.AuthIndex}, &physical); errGet == nil {
-				cached.Groups = groupsFromAuthJSON(physical.JSON)
-				if len(cached.Groups) > 0 {
-					cached.GroupSource = "auth-file"
-				}
+		} else if len(physicalJSON) > 0 {
+			cached.Groups = groupsFromAuthJSON(physicalJSON)
+			if len(cached.Groups) > 0 {
+				cached.GroupSource = "auth-file"
 			}
 		}
 		next[entry.ID] = cached
@@ -155,6 +162,36 @@ func refreshAuthCache(force bool) error {
 	pluginRuntime.lastRefreshError = ""
 	pluginRuntime.mu.Unlock()
 	return nil
+}
+
+func codexUsageMetadataFromAuthJSON(raw json.RawMessage) (string, string) {
+	if len(raw) == 0 {
+		return "", ""
+	}
+	var payload map[string]any
+	if errUnmarshal := json.Unmarshal(raw, &payload); errUnmarshal != nil {
+		return "", ""
+	}
+	planType := stringFromMap(payload, "plan_type", "planType")
+	accountID := stringFromMap(payload, "chatgpt_account_id", "chatgptAccountId")
+	if idToken, ok := payload["id_token"].(map[string]any); ok {
+		if planType == "" {
+			planType = stringFromMap(idToken, "plan_type", "planType")
+		}
+		if accountID == "" {
+			accountID = stringFromMap(idToken, "chatgpt_account_id", "chatgptAccountId")
+		}
+	}
+	return planType, accountID
+}
+
+func stringFromMap(values map[string]any, keys ...string) string {
+	for _, key := range keys {
+		if value, ok := values[key].(string); ok && strings.TrimSpace(value) != "" {
+			return strings.TrimSpace(value)
+		}
+	}
+	return ""
 }
 
 func groupsFromAuthJSON(raw json.RawMessage) []string {

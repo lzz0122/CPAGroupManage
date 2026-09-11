@@ -16,6 +16,7 @@ const (
 	managementRefreshPath     = "/v0/management/plugins/lzz-groups/refresh"
 	managementModelsPath      = "/v0/management/plugins/lzz-groups/models"
 	managementQuotaHealthPath = "/v0/management/plugins/lzz-groups/quota-health"
+	managementUsagePath       = "/v0/management/plugins/lzz-groups/usage"
 	resourceUIPath            = "/v0/resource/plugins/lzz-groups/ui"
 )
 
@@ -110,6 +111,7 @@ func registerManagementRoutes() []byte {
 			{Method: http.MethodPost, Path: "/plugins/lzz-groups/refresh", Description: "Refreshes credential metadata from the host."},
 			{Method: http.MethodPost, Path: "/plugins/lzz-groups/models", Description: "Returns models visible to one downstream API key."},
 			{Method: http.MethodPost, Path: "/plugins/lzz-groups/quota-health", Description: "Returns group-scoped quota health."},
+			{Method: http.MethodPost, Path: "/plugins/lzz-groups/usage", Description: "Returns official Codex quota windows for one downstream API key."},
 		},
 		Resources: []managementResource{{
 			Path:        "/ui",
@@ -162,6 +164,14 @@ func handleManagementRequest(raw []byte) ([]byte, error) {
 			response = map[string]any{"success": false, "error": "invalid_request_body"}
 		} else {
 			status, response = quotaHealthForAPIKey(body)
+		}
+	case req.Method == http.MethodPost && req.Path == managementUsagePath:
+		var body usageRequest
+		if errUnmarshal := json.Unmarshal(req.Body, &body); errUnmarshal != nil {
+			status = http.StatusBadRequest
+			response = map[string]any{"success": false, "error": "invalid_request_body"}
+		} else {
+			status, response = usageForAPIKey(body)
 		}
 	default:
 		status = http.StatusNotFound

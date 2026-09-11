@@ -19,7 +19,7 @@ import (
 const (
 	pluginID      = "lzz-groups"
 	pluginName    = "LZZ Groups"
-	pluginVersion = "0.1.0"
+	pluginVersion = "0.2.0"
 )
 
 type apiKeyPolicy struct {
@@ -51,6 +51,8 @@ type cachedAuth struct {
 	SupportedModels []string
 	Quota           hostQuotaState
 	ModelStates     map[string]hostModelState
+	PlanType        string
+	ChatGPTAccount  string
 }
 
 type runtimeState struct {
