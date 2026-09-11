@@ -19,7 +19,7 @@ import (
 const (
 	pluginID      = "lzz-groups"
 	pluginName    = "LZZ Groups"
-	pluginVersion = "0.2.0"
+	pluginVersion = "0.2.1"
 )
 
 type apiKeyPolicy struct {
