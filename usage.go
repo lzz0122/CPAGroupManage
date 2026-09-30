@@ -203,14 +203,8 @@ func quotaUsageForAuth(auth cachedAuth, refresh bool, ordinal int) quotaFetchRes
 		cached, hasCache := quotaUsageRuntime.cache[authIndex]
 		attemptedAt := quotaUsageRuntime.attemptedAt[authIndex]
 		lastFailure := quotaUsageRuntime.failures[authIndex]
-		if hasCache && !refresh {
-			next := attemptedAt.Add(quotaRefreshInterval)
-			if next.Before(now) {
-				next = now
-			}
-			quotaUsageRuntime.Unlock()
-			return quotaFetchResult{Account: cached.Account, UpdatedAt: cached.UpdatedAt, NextRefreshAt: next, Cached: true, Stale: lastFailure != nil, Err: lastFailure}
-		}
+		// Ordinary reads and explicit refreshes share the same 60-second limit.
+		// Once it expires, an ordinary read must not retain a snapshot forever.
 		if !attemptedAt.IsZero() && now.Sub(attemptedAt) < quotaRefreshInterval {
 			next := attemptedAt.Add(quotaRefreshInterval)
 			quotaUsageRuntime.Unlock()

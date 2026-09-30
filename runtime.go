@@ -19,7 +19,7 @@ import (
 const (
 	pluginID      = "lzz-groups"
 	pluginName    = "LZZ Groups"
-	pluginVersion = "0.2.1"
+	pluginVersion = "0.2.2"
 )
 
 type apiKeyPolicy struct {
@@ -104,8 +104,12 @@ func handlePluginMethod(method string, raw []byte) ([]byte, error) {
 		if errApply := applyPluginConfig(req.ConfigYAML); errApply != nil {
 			return errorEnvelope("invalid_config", errApply.Error(), 0), nil
 		}
+		// A replacement must know its credential groups before the host routes
+		// requests through it. Keep the old plugin active if warming fails.
+		if errRefresh := refreshAuthCache(true); errRefresh != nil {
+			return errorEnvelope("auth_cache_initialization_failed", errRefresh.Error(), 0), nil
+		}
 		startRefreshLoop()
-		go func() { _ = refreshAuthCache(true) }()
 		return okEnvelope(pluginRegistration()), nil
 	case pluginabi.MethodPluginQuiesce:
 		stopRefreshLoop()

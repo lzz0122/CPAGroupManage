@@ -134,7 +134,10 @@ Quota usage request example:
 {"api_key":"<DOWNSTREAM_API_KEY>","group":"lzz_plus","refresh":true}
 ```
 
-Official quota responses are cached per credential for 60 seconds. A failed refresh may return
+Official quota responses are cached per credential for 60 seconds. Ordinary reads and explicit
+refreshes both fetch a new official snapshot once that interval expires. Failed attempts also
+respect the interval, so retries cannot query the upstream more than once per minute.
+A failed refresh may return
 the last cached snapshot with `stale=true` and a non-empty `refresh_error`; stale data is never
 presented as a successful fresh refresh.
 
