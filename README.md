@@ -35,10 +35,24 @@ group filter and routing a request to the wrong credential.
 
 ## Build
 
+The current release targets CPA v8 (validated against v8.0.61). Build the host
+and plugin with Go 1.26.10 or newer and the same Linux libc. The native C ABI
+remains version 1; the v8 SDK module path is used for RPC types.
+
+The host patch also exposes the generic `scheduler_candidate_filter` capability.
+The plugin opts into it so group eligibility runs before cooldown and priority
+selection, then delegates to the configured selector. An absent eligibility
+decision fails closed. Ordinary upstream scheduler plugins retain their existing
+available-candidate behavior. Preserve `EligibleAuthIDs` (including an explicit
+empty list) in the v8 `SchedulerPickResponse.UnmarshalJSON` implementation.
+
+Frontend authentication opts out of request-body delivery: it uses only headers
+and query parameters, so long conversation payloads need not cross the plugin ABI.
+
 Requirements:
 
 - Linux;
-- Go 1.26;
+- Go 1.26.10 or newer;
 - a C toolchain for `-buildmode=c-shared`.
 
 ```bash

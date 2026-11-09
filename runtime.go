@@ -11,15 +11,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/router-for-me/CLIProxyAPI/v7/sdk/pluginabi"
-	"github.com/router-for-me/CLIProxyAPI/v7/sdk/pluginapi"
+	"github.com/router-for-me/CLIProxyAPI/v8/sdk/pluginabi"
+	"github.com/router-for-me/CLIProxyAPI/v8/sdk/pluginapi"
 	"gopkg.in/yaml.v3"
 )
 
 const (
 	pluginID      = "lzz-groups"
 	pluginName    = "LZZ Groups"
-	pluginVersion = "0.2.2"
+	pluginVersion = "0.3.0"
 )
 
 type apiKeyPolicy struct {
@@ -88,6 +88,9 @@ type registrationCapabilities struct {
 	FrontendAuthProvider          bool `json:"frontend_auth_provider"`
 	FrontendAuthProviderExclusive bool `json:"frontend_auth_provider_exclusive"`
 	Scheduler                     bool `json:"scheduler"`
+	SchedulerAcrossPriorities     bool `json:"scheduler_across_priorities"`
+	SchedulerCandidateFilter      bool `json:"scheduler_candidate_filter"`
+	FrontendAuthProviderOmitBody  bool `json:"frontend_auth_provider_omit_body"`
 	ManagementAPI                 bool `json:"management_api"`
 }
 
@@ -149,6 +152,9 @@ func pluginRegistration() registration {
 			FrontendAuthProvider:          true,
 			FrontendAuthProviderExclusive: true,
 			Scheduler:                     true,
+			SchedulerAcrossPriorities:     true,
+			SchedulerCandidateFilter:      true,
+			FrontendAuthProviderOmitBody:  true,
 			ManagementAPI:                 true,
 		},
 	}
